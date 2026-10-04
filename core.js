@@ -27,11 +27,11 @@ export function normalizeStyle(value = {}) {
   };
 }
 export function newSet() {
-  return {id: crypto.randomUUID(), name: 'Untitled pairing', updatedAt: new Date().toISOString(), roles: {
-    heading: normalizeStyle({fontFamily:'Georgia, serif', fontSize:'48px', lineHeight:'1.1', letterSpacing:'-1.5px', sample:'Good type. Great company.'}),
-    subheading: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'24px', fontWeight:'500', lineHeight:'1.3', sample:'A little contrast goes a long way.'}),
-    body: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'16px', lineHeight:'1.7', sample:'Bring your favorite letterforms together. A thoughtful pairing gives every word a place to belong.'}),
-    caption: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'11px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', sample:'The details make the difference.'})
+  return {id: crypto.randomUUID(), name: 'New pairing', updatedAt: new Date().toISOString(), roles: {
+    heading: normalizeStyle({fontFamily:'Georgia, serif', fontSize:'48px', lineHeight:'1.1', letterSpacing:'-1.5px', sample:'A study in type.'}),
+    subheading: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'24px', fontWeight:'500', lineHeight:'1.3', sample:'A clear point of view.'}),
+    body: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'16px', lineHeight:'1.7', sample:'Good typography gives every word its place.'}),
+    caption: normalizeStyle({fontFamily:'system-ui, sans-serif', fontSize:'11px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', sample:'Notes and details'})
   }};
 }
 export function normalizeSet(value) {

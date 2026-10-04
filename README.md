@@ -7,9 +7,9 @@
   </picture>
 </h1>
 
-Type Pilot is a local-first browser typography workspace. Inspect the type behind your favorite websites, collect thoughtful font pairings, and turn inspiration into reusable CSS.
+Inspect fonts on a page, save typography pairings, and export CSS.
 
-## Version 1.0 — Preview
+## Version 1.1 — Preview
 
 - Click-to-inspect font family, size, weight, style, line height, letter spacing, and text transform
 - Scan a page for distinct typography styles
@@ -24,7 +24,7 @@ Type Pilot is a local-first browser typography workspace. Inspect the type behin
 
 All preview features are free. No account, analytics, remote font downloads, or subscription.
 
-[Explore Type Pilot](https://stefanmihajlovic.com/type-pilot/)
+The redesigned preview is under review. Its website is currently offline.
 
 ## Try it locally
 
@@ -32,7 +32,7 @@ All preview features are free. No account, analytics, remote font downloads, or 
 2. Open `edge://extensions` in Microsoft Edge, or `chrome://extensions` in Chrome.
 3. Enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 4. Pin Type Pilot, open a regular website, and click its icon.
-5. Choose **Pick typography**, then click some text. Reopen Type Pilot to use the captured style. Alternatively, open its side panel to keep your workspace visible.
+5. Choose **Pick font**, then click some text. Reopen Type Pilot to use the captured style. Alternatively, open its side panel to keep your workspace visible.
 
 Chrome/Edge 116 or newer is required. This preview is not yet listed in the extension stores.
 
