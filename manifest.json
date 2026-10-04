@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Type Pilot",
-  "version": "1.2.0",
+  "name": "Font Pirate",
+  "version": "2.0.0",
   "minimum_chrome_version": "116",
-  "description": "Find fonts on any page. Preview typography pairings and export CSS.",
+  "description": "Explore Google Fonts, identify type on websites, and save your font pairings.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "contextMenus"
   ],
   "background": {
     "service_worker": "background.js",
@@ -16,7 +17,7 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_title": "Type Pilot",
+    "default_title": "Font Pirate",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

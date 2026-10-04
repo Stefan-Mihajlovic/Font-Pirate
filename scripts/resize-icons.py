@@ -2,7 +2,7 @@
 from pathlib import Path
 import subprocess
 root = Path(__file__).resolve().parents[1]
-source = root / 'assets/icon-layers/type-pilot-composer.png'
+source = root / 'assets/font-pirate/font-pirate-composer.png'
 if not source.exists():
     raise SystemExit('Export the icon from Icon Composer first; see README.md.')
 for size in (16, 32, 48, 128, 256, 512):

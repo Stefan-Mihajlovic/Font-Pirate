@@ -41,12 +41,12 @@ export function normalizeSet(value) {
 export function importSets(text) {
   if (text.length > 2_000_000) throw new Error('Choose a JSON file smaller than 2 MB.');
   const data = JSON.parse(text);
-  if (data.version !== 1 || !Array.isArray(data.sets) || data.sets.length > 200 || !data.sets.length) throw new Error('Choose a Type Pilot v1 backup with 1–200 pairings.');
+  if (data.version !== 1 || !Array.isArray(data.sets) || data.sets.length > 200 || !data.sets.length) throw new Error('Choose a Font Pirate or Type Pilot backup with 1–200 pairings.');
   return data.sets.map(normalizeSet);
 }
-export function exportJSON(sets) { return JSON.stringify({app:'Type Pilot',version:1,sets}, null, 2); }
+export function exportJSON(sets) { return JSON.stringify({app:'Font Pirate',version:1,sets}, null, 2); }
 export function exportCSS(set) {
-  const lines = ['/* Typography pairing · Type Pilot */', ':root {'];
+  const lines = ['/* Typography pairing · Font Pirate */', ':root {'];
   const fields = {fontFamily:'font-family',fontSize:'font-size',fontWeight:'font-weight',fontStyle:'font-style',lineHeight:'line-height',letterSpacing:'letter-spacing',textTransform:'text-transform'};
   for (const role of ROLES) {
     if (!set.roles[role]) continue;
@@ -62,4 +62,4 @@ export function exportCSS(set) {
   }
   return lines.join('\n');
 }
-export function fileName(name) { return (String(name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'type-pilot'); }
+export function fileName(name) { return (String(name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'font-pirate'); }

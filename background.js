@@ -38,3 +38,23 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   queue.then(reply, e => reply({ok:false,error:e.message}));
   return true;
 });
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({id:'identify-font',title:'Identify font',contexts:['selection'],documentUrlPatterns:['http://*/*','https://*/*']});
+    chrome.contextMenus.create({id:'pick-font',title:'Pick a font…',contexts:['page','link'],documentUrlPatterns:['http://*/*','https://*/*']});
+  });
+});
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (!['identify-font','pick-font'].includes(info.menuItemId) || !tab?.id) return;
+  // Open synchronously from the browser gesture, before script injection awaits.
+  const panel = chrome.sidePanel.open({windowId:tab.windowId});
+  (async () => {
+    const target={tabId:tab.id,frameIds:[info.frameId || 0]};
+    await chrome.scripting.executeScript({target,files:['content.js']});
+    await chrome.scripting.executeScript({target,func: mode => globalThis.__typePilot[mode](),args:[info.menuItemId==='identify-font'?'selection':'inspect']});
+    await panel;
+  })().catch(async () => {
+    await chrome.storage.local.set({inspectorError:'Open the extension on this page and choose Pick a font.'});
+  });
+});

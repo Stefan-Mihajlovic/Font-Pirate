@@ -1,4 +1,13 @@
-import {ROLES, LABELS, newSet, normalizeStyle, exportCSS, exportJSON, fileName} from './core.js';
+import {ROLES, LABELS, newSet, normalizeStyle, exportCSS as baseExportCSS, exportJSON, fileName} from './core.js';
+import {fonts, filterFonts, familyOf, loadFont, fontCSSURL} from './catalog.js';
+
+function exportCSS(set) {
+  const imports=[...new Set(Object.values(set.roles).flatMap(style=>{
+    const font=fonts.find(f=>f.family===familyOf(style.fontFamily));
+    return font ? ["@import url('"+fontCSSURL(font,style.fontWeight,style.fontStyle==='italic')+"');"] : [];
+  }))];
+  return (imports.length ? imports.join('\n')+'\n\n' : '')+baseExportCSS(set);
+}
 
 const $ = id => document.getElementById(id);
 const isPanel = new URLSearchParams(location.search).get('surface') === 'sidepanel';
@@ -37,6 +46,7 @@ function view(name) {
   });
   if (name === 'pairing') renderEditor();
   if (name === 'library') renderLibrary();
+  if (name === 'inspect' && !$('capture').hasChildNodes()) $('scan').click();
   window.scrollTo(0, 0);
 }
 function applyStyle(el, style) {
@@ -44,6 +54,7 @@ function applyStyle(el, style) {
 }
 function applyPreview(el, style) {
   applyStyle(el, style);
+  loadFont(style.fontFamily, style.fontWeight, style.fontStyle === 'italic').catch(() => {});
   const computed = getComputedStyle(el);
   const size = parseFloat(computed.fontSize) || 24;
   const line = parseFloat(computed.lineHeight);
@@ -58,11 +69,11 @@ function remember() {
 }
 async function request(message) {
   const result = await chrome.runtime.sendMessage(message);
-  if (!result?.ok) throw new Error(result?.error || 'Reopen Type Pilot and try again.');
+  if (!result?.ok) throw new Error(result?.error || 'Reopen Font Pirate and try again.');
   return result;
 }
 async function action(fn) {
-  try { await fn(); } catch (error) { toast(error.message || 'Reopen Type Pilot and try again.'); }
+  try { await fn(); } catch (error) { toast(error.message || 'Reopen Font Pirate and try again.'); }
 }
 async function confirmChange(title, copy) {
   $('confirm-title').textContent = title;
@@ -81,7 +92,7 @@ async function runOnPage(mode) {
     await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['content.js']});
     return await chrome.scripting.executeScript({target: {tabId: tab.id}, func: m => globalThis.__typePilot[m](), args: [mode]});
   } catch {
-    throw new Error('Click the Type Pilot toolbar icon on this page, then retry.');
+    throw new Error('Click the Font Pirate toolbar icon on this page, then retry.');
   }
 }
 $('pick').onclick = () => action(async () => {
@@ -117,6 +128,7 @@ document.querySelectorAll('[data-role]').forEach(button => button.onclick = () =
 $('preview-pairing').onclick = () => { overview = true; renderEditor(); };
 $('back-library').onclick = () => view('library');
 $('create-pairing').onclick = () => $('new-set').click();
+$('browse-role').onclick = () => {$('detail-role').value=role; view('catalog'); $('catalog-browser').hidden=false; $('font-detail').hidden=true; $('font-search').focus();};
 function fontName(family) { const name = family.split(',')[0].replace(/^['"]|['"]$/g, '').trim(); return ['-apple-system','system-ui','BlinkMacSystemFont'].includes(name) ? 'System UI' : name; }
 function shortValue(value) {
   return String(value).replace(/(-?\d+\.\d{2})\d+/g, '$1');
@@ -263,7 +275,7 @@ $('export-css').onclick = () => download(exportCSS(draft), `${fileName(draft.nam
 $('export-json').onclick = () => download(exportJSON([draft]), `${fileName(draft.name)}.json`, 'application/json');
 $('backup').onclick = () => {
   if (!library.length) return toast('Save a pairing first.');
-  download(exportJSON(library), 'type-pilot-library.json', 'application/json');
+  download(exportJSON(library), 'font-pirate-library.json', 'application/json');
 };
 $('import').onclick = () => $('import-file').click();
 $('import-file').onchange = () => action(async () => {
@@ -312,6 +324,7 @@ function renderLibrary() {
 }
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
+  if (changes.inspectorError?.newValue) toast(changes.inspectorError.newValue);
   if (changes.lastCapture?.newValue) { renderCapture(changes.lastCapture.newValue); view('inspect'); }
   if (changes.library) { library = changes.library.newValue || []; renderLibrary(); }
   if (changes.draft?.newValue) {
@@ -332,9 +345,74 @@ chrome.storage.onChanged.addListener((changes, area) => {
     try {
       const results = await runOnPage('scan');
       if (results[0]?.result) renderScan(results[0].result);
-      if (data.lastCapture?.source === tab?.url?.split(/[?#]/)[0] && Date.now()-data.lastCapture.capturedAt < 15000) renderCapture(data.lastCapture);
+      if (data.lastCapture?.source === tab?.url?.split(/[?#]/)[0] && Date.now()-data.lastCapture.capturedAt < 15000) { renderCapture(data.lastCapture); view('inspect'); }
     } catch (error) {
       $('welcome').querySelector('p').textContent = error.message;
     }
-  } catch { toast('Storage unavailable. Reopen Type Pilot.'); }
+  } catch { toast('Storage unavailable. Reopen Font Pirate.'); }
 })();
+
+// Google Fonts browser: all families, with small batches and lazy font previews.
+let favorites = new Set(), favoriteOnly = false, matches = [], shown = 0, selectedFont;
+const fontObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) if (entry.isIntersecting) {
+    const row = entry.target; fontObserver.unobserve(row);
+    loadFont(row.dataset.family).then(() => row.classList.add('font-loaded')).catch(() => {row.title = 'Preview unavailable — check your connection'; row.classList.add('font-unavailable');});
+  }
+}, {root: $('font-list'), rootMargin: '50px'});
+function saveFavorites() {chrome.storage.local.set({fontFavorites:[...favorites]}).catch(() => toast('Could not save favorites.'));}
+function favoriteButton(name) {
+  const button = element('button', 'icon font-star', favorites.has(name) ? '★' : '☆');
+  button.setAttribute('aria-label', `Favorite ${name}`); button.setAttribute('aria-pressed', String(favorites.has(name)));
+  button.onclick = () => {favorites.has(name) ? favorites.delete(name) : favorites.add(name); saveFavorites(); button.textContent=favorites.has(name)?'★':'☆'; button.setAttribute('aria-pressed',String(favorites.has(name))); if(favoriteOnly) renderFonts();};
+  return button;
+}
+function appendFonts() {
+  for (const font of matches.slice(shown,shown+30)) {
+    const row = element('div','catalog-row'); row.dataset.family=font.family;
+    const choose = element('button','catalog-font');
+    choose.setAttribute('aria-label', `Preview ${font.family}`);
+    const sample=element('span','catalog-font-sample',$('catalog-sample').value || font.family); sample.style.fontFamily=`"${font.family}"`;
+    choose.append(sample);
+    if ($('catalog-sample').value) choose.append(element('span','catalog-family-name',font.family));
+    choose.onclick=()=>openFont(font);row.append(choose,favoriteButton(font.family));$('font-rows').append(row);fontObserver.observe(row);
+  }
+  shown = Math.min(shown+30,matches.length);
+  $('font-sentinel').hidden = shown >= matches.length;
+}
+function renderFonts() {
+  fontObserver.disconnect();
+  matches=filterFonts({query:$('font-search').value,category:$('font-category').value,sort:$('font-sort').value,favorites:favoriteOnly?favorites:undefined});shown=0;
+  $('font-rows').replaceChildren();$('font-list').scrollTop=0;
+  $('catalog-count').textContent=`${matches.length.toLocaleString()} fonts`;
+  if(!matches.length) $('font-rows').append(element('p','empty',favoriteOnly?'Star a font to save it here.':'No matching fonts.'));
+  appendFonts();
+}
+$('font-list').onscroll=()=>{const el=$('font-list'); if(el.scrollTop+el.clientHeight>el.scrollHeight-180 && shown<matches.length)appendFonts();};
+$('font-list').onkeydown=event=>{if(event.key==='End'){while(shown<matches.length)appendFonts();}};
+$('font-search').oninput=renderFonts;$('font-category').onchange=renderFonts;$('font-sort').onchange=renderFonts;
+$('font-favorites').onclick=()=>{favoriteOnly=!favoriteOnly;$('font-favorites').setAttribute('aria-pressed',String(favoriteOnly));renderFonts();};
+$('custom-preview').onclick=()=>{$('catalog-sample').hidden=!$('catalog-sample').hidden;if(!$('catalog-sample').hidden)$('catalog-sample').focus();};
+$('catalog-sample').oninput=renderFonts;
+$('back-fonts').onclick=()=>{$('catalog-browser').hidden=false;$('font-detail').hidden=true;};
+function detailStyle() {const variant=$('detail-weight').value;return normalizeStyle({fontFamily:`"${selectedFont.family}"`,fontSize:`${$('detail-size').value}px`,fontWeight:String(parseInt(variant)),fontStyle:variant.endsWith('i')?'italic':'normal',lineHeight:'1.3',sample:$('detail-sample').value});}
+function updateFontDetail() {
+  const style=detailStyle();applyStyle($('detail-sample'),style);$('detail-size-value').textContent=$('detail-size').value;
+  const family=selectedFont.family;$('font-load-status').hidden=true;
+  loadFont(family,style.fontWeight,style.fontStyle==='italic').catch(error=>{if(selectedFont.family===family){$('font-load-status').hidden=false;$('font-load-status').textContent=error.message;}});
+}
+function openFont(font) {
+  selectedFont=font;$('catalog-browser').hidden=true;$('font-detail').hidden=false;$('detail-name').textContent=font.family;
+  $('detail-sample').value=$('catalog-sample').value||'The quick brown fox jumps over the lazy dog.';
+  $('detail-weight').replaceChildren();
+  for(const w of font.weights){const option=element('option','',`${parseInt(w)}${w.endsWith('i')?' Italic':''}`);option.value=w;$('detail-weight').append(option);}
+  $('detail-weight').value=font.weights.includes('400')?'400':font.weights[0];
+  $('detail-favorite').textContent=favorites.has(font.family)?'★':'☆';$('detail-favorite').setAttribute('aria-pressed',String(favorites.has(font.family)));
+  $('google-font-link').href=`https://fonts.google.com/specimen/${encodeURIComponent(font.family)}`;updateFontDetail();
+}
+$('detail-favorite').onclick=()=>{const name=selectedFont.family;favorites.has(name)?favorites.delete(name):favorites.add(name);saveFavorites();$('detail-favorite').textContent=favorites.has(name)?'★':'☆';$('detail-favorite').setAttribute('aria-pressed',String(favorites.has(name)));renderFonts();};
+$('detail-weight').onchange=updateFontDetail;$('detail-size').oninput=updateFontDetail;
+$('use-font').onclick=()=>{role=$('detail-role').value;const chosen=detailStyle();draft.roles[role]={...draft.roles[role],fontFamily:chosen.fontFamily,fontWeight:chosen.fontWeight,fontStyle:chosen.fontStyle};overview=true;remember();view('pairing');};
+$('copy-font').onclick=()=>action(async()=>{const s=detailStyle();await navigator.clipboard.writeText(`@import url('${fontCSSURLForSelected()}');\n\nfont-family: ${s.fontFamily};\nfont-weight: ${s.fontWeight};\nfont-style: ${s.fontStyle};`);toast('CSS copied.');});
+function fontCSSURLForSelected(){const w=$('detail-weight').value;return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(selectedFont.family)}:${w.endsWith('i')?'ital,wght@1,':'wght@'}${parseInt(w)}&display=swap`;}
+chrome.storage.local.get('fontFavorites').then(data=>{favorites=new Set((data.fontFavorites||[]).filter(name=>fonts.some(f=>f.family===name)));renderFonts();});

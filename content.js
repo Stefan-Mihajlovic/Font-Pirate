@@ -12,7 +12,7 @@
     host.style.cssText = 'all:initial!important;position:fixed!important;inset:0!important;z-index:2147483647!important;pointer-events:none!important;';
     const root = host.attachShadow({mode:'closed'});
     const style = document.createElement('style');
-    style.textContent = ':host{all:initial}.box{position:fixed;border:2px solid #2464e8;background:#2464e812;border-radius:3px;box-sizing:border-box;pointer-events:none}.tip{position:fixed;left:16px;bottom:16px;max-width:calc(100vw - 32px);padding:14px 18px;border:1px solid #d5e1ed;border-radius:12px;background:#ffffff;color:#20334b;font:13px/1.5 system-ui;box-shadow:0 8px 32px #0003}.detail{color:#6a7c90;font-size:11px}';
+    style.textContent = ':host{all:initial}.box{position:fixed;border:2px solid #8054d9;background:#8054d912;border-radius:3px;box-sizing:border-box;pointer-events:none}.tip{position:fixed;left:16px;bottom:16px;max-width:calc(100vw - 32px);padding:14px 18px;border:1px solid #d5e1ed;border-radius:12px;background:#ffffff;color:#241f2e;font:13px/1.5 system-ui;box-shadow:0 8px 32px #0003}.detail{color:#746b80;font-size:13px}';
     const box = document.createElement('div'); box.className='box'; box.hidden=true;
     const tip = document.createElement('div'); tip.className='tip';
     const title = document.createElement('div'); title.textContent='Click any text';
@@ -41,7 +41,7 @@
         const result = await chrome.runtime.sendMessage({type:'CAPTURE',style:read(el)});
         if (!result?.ok) throw new Error(result?.error || 'Capture failed');
         cleanup();
-      } catch {title.textContent='Please reopen Type Pilot and try again.';}
+      } catch {title.textContent='Please reopen Font Pirate and try again.';}
     };
     const key = event => {if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cleanup();}};
     const block = event => {event.preventDefault();event.stopImmediatePropagation();};
@@ -72,5 +72,12 @@
     }
     return {styles:[...styles.values()].sort((a,b)=>b.count-a.count), limited:visited>=10000 || styles.size>=100};
   }
-  globalThis.__typePilot = {inspect,scan,stop:()=>cleanup()};
+  async function selection() {
+    const selected = window.getSelection();
+    const node = selected?.anchorNode;
+    const el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    if (!el || !selected.toString().trim()) {inspect();return;}
+    await chrome.runtime.sendMessage({type:'CAPTURE',style:{...read(el),sample:selected.toString().trim().slice(0,500)}});
+  }
+  globalThis.__typePilot = {selection,inspect,scan,stop:()=>cleanup()};
 })();

@@ -24,4 +24,4 @@ test('invalid dimensions and roles are normalized without prototype pollution',(
  const style=normalizeStyle({fontSize:'calc(1px);color:red',fontWeight:'500; x',letterSpacing:'-0.03em',lineHeight:'normal'});assert.equal(style.fontSize,'16px');assert.equal(style.fontWeight,'400');assert.equal(style.letterSpacing,'-0.03em');assert.equal(style.lineHeight,'normal');
  const set=normalizeSet(JSON.parse('{"roles":{"heading":{},"__proto__":{"polluted":true}}}'));assert.deepEqual(Object.keys(set.roles),['heading']);assert.equal({}.polluted,undefined);
 });
-test('filenames cannot escape download directory',()=>{assert.equal(fileName('../../Private/My Type'),'private-my-type');assert.equal(fileName(''),'type-pilot');});
+test('filenames cannot escape download directory',()=>{assert.equal(fileName('../../Private/My Type'),'private-my-type');assert.equal(fileName(''),'font-pirate');});

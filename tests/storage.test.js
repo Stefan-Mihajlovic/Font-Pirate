@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newSet,exportJSON} from '../core.js';
 const state={};let listener;
-globalThis.chrome={runtime:{id:'type-pilot-test',onMessage:{addListener(fn){listener=fn;}}},storage:{local:{async get(key){await new Promise(r=>setTimeout(r,2));return {[key]:structuredClone(state[key])};},async set(patch){Object.assign(state,structuredClone(patch));}}}};
+globalThis.chrome={runtime:{id:'type-pilot-test',onInstalled:{addListener(){}},onMessage:{addListener(fn){listener=fn;}}},contextMenus:{onClicked:{addListener(){}}},storage:{local:{async get(key){await new Promise(r=>setTimeout(r,2));return {[key]:structuredClone(state[key])};},async set(patch){Object.assign(state,structuredClone(patch));}}}};
 await import('../background.js');
 const send=(message,sender={id:'type-pilot-test'})=>new Promise(resolve=>{const accepted=listener(message,sender,resolve);if(!accepted)resolve(undefined);});
 test('concurrent saves preserve both pairings, updates keep identity, deletion keeps the other',async()=>{
