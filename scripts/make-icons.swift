@@ -14,6 +14,10 @@ for size in [16,32,48,128,512,1024] {
  ("p" as NSString).draw(at:NSPoint(x:70,y:14),withAttributes:attrs2)
  NSColor(calibratedRed:0.97,green:0.81,blue:0.5,alpha:1).setFill();NSBezierPath(ovalIn:NSRect(x:98,y:98,width:9,height:9)).fill()
  image.unlockFocus()
- let rep=NSBitmapImageRep(data:image.tiffRepresentation!)!
+ let rep=NSBitmapImageRep(bitmapDataPlanes:nil,pixelsWide:size,pixelsHigh:size,bitsPerSample:8,samplesPerPixel:4,hasAlpha:true,isPlanar:false,colorSpaceName:.deviceRGB,bytesPerRow:0,bitsPerPixel:0)!
+ NSGraphicsContext.saveGraphicsState()
+ NSGraphicsContext.current=NSGraphicsContext(bitmapImageRep:rep)
+ image.draw(in:NSRect(x:0,y:0,width:size,height:size))
+ NSGraphicsContext.restoreGraphicsState()
  try rep.representation(using:.png,properties:[:])!.write(to:URL(fileURLWithPath:"\(root)/icons/icon\(size).png"))
 }

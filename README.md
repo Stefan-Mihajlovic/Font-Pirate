@@ -57,7 +57,7 @@ Browser settings pages, extension stores, built-in PDF viewers, and embedded fra
 
 No runtime dependencies or build step. Edit the source, reload the extension, and reopen its UI. Refresh any page that had the inspector injected before reloading.
 
-- `npm test` — import/export validation and inspector lifecycle checks
+- `npm test` — import/export validation, concurrent library writes, and message permission checks
 - `npm run package` — create the installable ZIP in `dist/`
 - `swift scripts/make-icons.swift "$PWD"` — regenerate icons on macOS
 - `tests/fixture.html` — local typography test page
