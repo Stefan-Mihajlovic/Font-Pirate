@@ -5,7 +5,7 @@
   <p>Google Fonts, page inspection and saved pairings for Chrome and Edge.</p>
 </div>
 
-<p align="center"><img src="assets/screenshots/catalog.jpg" width="340" alt="Google Fonts catalog"><img src="assets/screenshots/pairing.jpg" width="340" alt="A saved font pairing"></p>
+<p align="center"><img src="assets/screenshots/catalog.png" width="340" alt="Google Fonts catalog"><img src="assets/screenshots/pairing.png" width="340" alt="A saved font pairing"></p>
 
 ## Find your font
 
