@@ -1,0 +1,13 @@
+from pathlib import Path
+from zipfile import ZipFile, ZIP_DEFLATED
+root = Path(__file__).resolve().parents[1]
+output = root / 'dist' / 'type-pilot-1.0.0.zip'
+output.parent.mkdir(exist_ok=True)
+files = ['manifest.json', 'background.js', 'core.js', 'content.js', 'index.html', 'app.js', 'style.css', 'LICENSE']
+with ZipFile(output, 'w', ZIP_DEFLATED) as z:
+    for name in files:
+        z.write(root / name, name)
+    for path in (root / 'icons').glob('icon*.png'):
+        if path.stem in ['icon16', 'icon32', 'icon48', 'icon128']:
+            z.write(path, str(path.relative_to(root)))
+print(output)
