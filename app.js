@@ -6,7 +6,7 @@ if (isPanel) {
   document.body.classList.add('sidepanel');
   $('panel').hidden = true;
 }
-let draft = newSet(), role = 'heading', library = [], toastTimer;
+let draft = newSet(), role = 'heading', library = [], toastTimer, overview = true;
 const fields = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontStyle', 'textTransform', 'sample'];
 const element = (tag, cls, text) => {
   const el = document.createElement(tag);
@@ -31,8 +31,8 @@ function toast(text) {
 function view(name) {
   document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== name);
   document.querySelectorAll('[data-view]').forEach(el => {
-    el.classList.toggle('active', el.dataset.view === name);
-    if (el.dataset.view === name) el.setAttribute('aria-current', 'page');
+    el.classList.toggle('active', el.dataset.view === (name === 'pairing' ? 'library' : name));
+    if (el.dataset.view === (name === 'pairing' ? 'library' : name)) el.setAttribute('aria-current', 'page');
     else el.removeAttribute('aria-current');
   });
   if (name === 'pairing') renderEditor();
@@ -86,8 +86,11 @@ async function runOnPage(mode) {
 }
 $('pick').onclick = () => action(async () => {
   await runOnPage('inspect');
-  if (!isPanel) window.close();
-  else toast('Click text to capture. Esc to cancel.');
+  if (!isPanel) {
+    const win = await chrome.windows.getCurrent();
+    await chrome.sidePanel.open({windowId: win.id});
+    window.close();
+  }
 });
 $('scan').onclick = () => action(async () => {
   $('scan').disabled = true;
@@ -110,76 +113,98 @@ $('theme').onchange = () => {
   chrome.storage.local.set({theme: $('theme').value}).catch(() => toast('Could not save appearance.'));
 };
 document.querySelectorAll('[data-view]').forEach(button => button.onclick = () => view(button.dataset.view));
-document.querySelectorAll('[data-role]').forEach(button => button.onclick = () => { role = button.dataset.role; renderEditor(); });
-function fontName(family) { return family.split(',')[0].replace(/^['"]|['"]$/g, '').trim(); }
+document.querySelectorAll('[data-role]').forEach(button => button.onclick = () => { overview = false; role = button.dataset.role; renderEditor(); });
+$('preview-pairing').onclick = () => { overview = true; renderEditor(); };
+$('back-library').onclick = () => view('library');
+$('create-pairing').onclick = () => $('new-set').click();
+function fontName(family) { const name = family.split(',')[0].replace(/^['"]|['"]$/g, '').trim(); return ['-apple-system','system-ui','BlinkMacSystemFont'].includes(name) ? 'System UI' : name; }
 function shortValue(value) {
   return String(value).replace(/(-?\d+\.\d{2})\d+/g, '$1');
 }
 function renderCapture(style) {
+  if (style.source) $('page-host').textContent = new URL(style.source).hostname;
   $('capture').hidden = false;
   $('welcome').hidden = true;
+  $('page-styles').hidden = true;
   const card = element('div', 'capture-card');
+  const back = element('button', 'text-button', '‹ Page fonts');
+  back.onclick = () => { $('capture').hidden = true; $('page-styles').hidden = false; };
   const heading = element('div', 'capture-heading');
-  heading.append(element('h2', '', fontName(style.fontFamily)), element('span', '', style.fontStyle === 'normal' ? 'Regular' : style.fontStyle));
+  heading.append(element('h2', '', fontName(style.fontFamily)), element('span', '', style.fontStyle === 'normal' ? style.fontWeight : style.fontStyle));
   const sample = element('p', 'sample', style.sample || 'Aa Bb Cc');
-
   const metrics = element('dl', 'metrics');
-  for (const [label, value] of [['Size', style.fontSize], ['Weight', style.fontWeight], ['Line height', style.lineHeight], ['Spacing', style.letterSpacing], ['Style', style.fontStyle], ['Case', style.textTransform]]) {
+  for (const [label, value] of [['Size', style.fontSize], ['Weight', style.fontWeight], ['Line height', style.lineHeight], ['Spacing', style.letterSpacing]]) {
     const metric = element('div', 'metric');
     metric.append(element('dt', '', label), element('dd', '', shortValue(value)));
     metrics.append(metric);
   }
   const actions = element('div', 'capture-actions');
-  const select = element('select');
-  select.setAttribute('aria-label', 'Typography role');
-  ROLES.forEach(r => {
-    const option = element('option', '', LABELS[r]);
-    option.value = r;
-    select.append(option);
-  });
+  const select = element('select'); select.setAttribute('aria-label', 'Use font for');
+  ROLES.forEach(r => { const option = element('option', '', LABELS[r]); option.value = r; select.append(option); });
   select.value = role;
-  const add = element('button', 'primary', 'Add to pairing');
-  add.onclick = () => {
-    role = select.value;
-    draft.roles[role] = normalizeStyle(style);
-    remember();
-    view('pairing');
-  };
+  const add = element('button', 'primary', 'Use in pairing');
+  add.onclick = () => { role = select.value; draft.roles[role] = normalizeStyle(style); overview = true; remember(); view('pairing'); };
+  const copy = element('button', 'text-button', 'Copy CSS');
+  copy.onclick = () => action(async () => {
+    const values = {fontFamily:'font-family',fontSize:'font-size',fontWeight:'font-weight',lineHeight:'line-height',letterSpacing:'letter-spacing',fontStyle:'font-style',textTransform:'text-transform'};
+    await navigator.clipboard.writeText(Object.entries(values).map(([key,css]) => `${css}: ${style[key]};`).join('\n'));
+    toast('CSS copied.');
+  });
   actions.append(select, add);
-  card.append(heading, sample, metrics, actions);
-  if (style.source) {
-    const source = element('div', 'source-row');
-    source.title = style.source;
-    source.append(element('span', '', new URL(style.source).hostname));
-    card.append(source);
-  }
+  card.append(back, heading, sample, metrics, actions, copy);
   $('capture').replaceChildren(card);
   applyPreview(sample, style);
 }
 function renderScan(result) {
+  $('capture').hidden = true;
   $('page-styles').hidden = false;
   $('welcome').hidden = true;
-  $('scan-count').textContent = `${result.styles.length}${result.limited ? ' · scan limit reached' : ''}`;
-  const list = $('scan-results');
-  list.replaceChildren();
-  if (!result.styles.length) {
-    list.append(element('p', 'empty', 'No text styles found on this page.'));
-    return;
-  }
+  const groups = new Map();
   for (const style of result.styles) {
-    const card = element('div', 'scan-card');
-    const text = element('div', 'scan-text');
-    text.append(element('h3', '', fontName(style.fontFamily)), element('p', '', `${shortValue(style.fontSize)} / ${style.fontWeight} / ${shortValue(style.lineHeight)}`));
-    const choose = element('button', 'icon');
-    choose.setAttribute('aria-label', `Select ${fontName(style.fontFamily)}, ${shortValue(style.fontSize)}`);
-    choose.title = 'Inspect style';
-    choose.append(icon('plus'));
-    choose.onclick = () => { renderCapture(normalizeStyle(style)); window.scrollTo(0, 0); };
-    card.append(text, choose);
-    list.append(card);
+    if (!groups.has(style.fontFamily)) groups.set(style.fontFamily, []);
+    groups.get(style.fontFamily).push(style);
+  }
+  $('font-total').textContent = `${groups.size} font${groups.size === 1 ? '' : 's'}`;
+  $('scan-count').textContent = result.limited ? 'Scan limit reached' : '';
+  const list = $('scan-results'); list.replaceChildren();
+  if (!groups.size) { list.append(element('p', 'empty', 'No fonts found. Try picking text on the page.')); return; }
+  for (const [family, styles] of groups) {
+    const group = element('details', 'font-group');
+    const summary = element('summary', 'font-row');
+    const name = element('span', 'font-name', fontName(family));
+    name.style.fontFamily = family;
+    const meta = element('span', 'font-meta', `${styles.length} style${styles.length === 1 ? '' : 's'}`);
+    summary.append(name, meta, element('span', 'chevron', '›'));
+    const list = element('div', 'style-list');
+    for (const style of styles) {
+      const button = element('button', 'style-row');
+      button.append(element('span', '', `${shortValue(style.fontSize)} · ${style.fontWeight}${style.fontStyle === 'normal' ? '' : ' '+style.fontStyle}`), element('span', 'style-sample', style.sample.slice(0,55)));
+      button.title = 'Inspect this style';
+      button.onclick = () => renderCapture(normalizeStyle(style));
+      list.append(button);
+    }
+    group.append(summary, list); $('scan-results').append(group);
+  }
+}
+function renderSpecimen() {
+  const specimen = $('pairing-specimen'); specimen.replaceChildren();
+  for (const key of ROLES) {
+    const style = draft.roles[key]; if (!style) continue;
+    const button = element('button', `specimen-${key}`, style.sample || LABELS[key]);
+    button.title = `Edit ${LABELS[key].toLowerCase()}`;
+    button.setAttribute('aria-label', `Edit ${LABELS[key]}: ${style.sample}`);
+    applyStyle(button, style);
+    specimen.append(button);
+    applyPreview(button, style);
+    button.onclick = () => { role = key; overview = false; renderEditor(); };
   }
 }
 function renderEditor() {
+  $('pairing-specimen').hidden = !overview;
+  $('role-editor').hidden = overview;
+  $('preview-pairing').classList.toggle('active', overview);
+  $('preview-pairing').setAttribute('aria-pressed', String(overview));
+  renderSpecimen();
   $('set-name').value = draft.name;
   if (!draft.roles[role]) draft.roles[role] = normalizeStyle();
   const style = draft.roles[role];
@@ -193,8 +218,8 @@ function renderEditor() {
   }
   fields.forEach(key => $(key).value = style[key]);
   document.querySelectorAll('[data-role]').forEach(button => {
-    button.classList.toggle('active', button.dataset.role === role);
-    button.setAttribute('aria-pressed', String(button.dataset.role === role));
+    button.classList.toggle('active', !overview && button.dataset.role === role);
+    button.setAttribute('aria-pressed', String(!overview && button.dataset.role === role));
   });
   $('source').textContent = style.source || '';
   $('source').hidden = !style.source;
@@ -219,7 +244,7 @@ $('sample').addEventListener('input', () => { draft.roles[role].sample = $('samp
 $('set-name').addEventListener('input', () => { draft.name = $('set-name').value; remember(); });
 $('new-set').onclick = () => action(async () => {
   if (!hasUnsavedChanges() || await confirmChange('Start a new pairing?', 'Your unsaved draft will be replaced.')) {
-    draft = newSet(); role = 'heading'; remember(); renderEditor();
+    draft = newSet(); role = 'heading'; overview = true; remember(); view('pairing');
   }
 });
 $('save').onclick = () => action(async () => {
@@ -267,7 +292,7 @@ function renderLibrary() {
     const open = element('button', 'secondary', 'Open pairing');
     open.onclick = () => action(async () => {
       if (!hasUnsavedChanges() || await confirmChange('Open this pairing?', 'Your unsaved draft will be replaced.')) {
-        draft = structuredClone(set); remember(); view('pairing');
+        draft = structuredClone(set); overview = true; remember(); view('pairing');
       }
     });
     const more = element('details'); const summary = element('summary', '', '⋯');
@@ -299,9 +324,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const data = await chrome.storage.local.get(['draft', 'library', 'lastCapture', 'theme']);
     if (data.draft?.roles) draft = data.draft;
     library = data.library || [];
-    document.body.dataset.theme = data.theme || 'dark';
+    document.body.dataset.theme = data.theme || 'light';
     $('theme').value = document.body.dataset.theme;
-    if (data.lastCapture) renderCapture(data.lastCapture);
     renderLibrary();
+    const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
+    if (tab?.url && /^https?:/.test(tab.url)) $('page-host').textContent = new URL(tab.url).hostname;
+    try {
+      const results = await runOnPage('scan');
+      if (results[0]?.result) renderScan(results[0].result);
+      if (data.lastCapture?.source === tab?.url?.split(/[?#]/)[0] && Date.now()-data.lastCapture.capturedAt < 15000) renderCapture(data.lastCapture);
+    } catch (error) {
+      $('welcome').querySelector('p').textContent = error.message;
+    }
   } catch { toast('Storage unavailable. Reopen Type Pilot.'); }
 })();

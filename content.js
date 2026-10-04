@@ -8,14 +8,15 @@
   function inspect() {
     cleanup();
     const host = document.createElement('div');
+    host.dataset.typePilot = '';
     host.style.cssText = 'all:initial!important;position:fixed!important;inset:0!important;z-index:2147483647!important;pointer-events:none!important;';
     const root = host.attachShadow({mode:'closed'});
     const style = document.createElement('style');
-    style.textContent = ':host{all:initial}.box{position:fixed;border:2px solid #a78bfa;background:#a78bfa18;border-radius:3px;box-sizing:border-box;pointer-events:none}.tip{position:fixed;left:16px;bottom:16px;max-width:calc(100vw - 32px);padding:14px 18px;border:1px solid #665186;border-radius:12px;background:#211a2d;color:#fff;font:13px/1.5 system-ui;box-shadow:0 8px 32px #0003}.detail{color:#d3c2f3;font-size:11px}';
+    style.textContent = ':host{all:initial}.box{position:fixed;border:2px solid #2464e8;background:#2464e812;border-radius:3px;box-sizing:border-box;pointer-events:none}.tip{position:fixed;left:16px;bottom:16px;max-width:calc(100vw - 32px);padding:14px 18px;border:1px solid #d5e1ed;border-radius:12px;background:#ffffff;color:#20334b;font:13px/1.5 system-ui;box-shadow:0 8px 32px #0003}.detail{color:#6a7c90;font-size:11px}';
     const box = document.createElement('div'); box.className='box'; box.hidden=true;
     const tip = document.createElement('div'); tip.className='tip';
-    const title = document.createElement('div'); title.textContent='Type Pilot · Point at text, then click to capture';
-    const detail = document.createElement('div'); detail.className='detail'; detail.textContent='Esc to cancel · Page links stay put while inspecting';
+    const title = document.createElement('div'); title.textContent='Click any text';
+    const detail = document.createElement('div'); detail.className='detail'; detail.textContent='Esc to exit';
     tip.append(title,detail); root.append(style,box,tip); document.documentElement.append(host);
     let target = null;
     const locate = event => {
@@ -29,8 +30,8 @@
       box.hidden=false;
       Object.assign(box.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
       const s = read(target);
-      title.textContent = s.fontFamily;
-      detail.textContent = `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight} · Click to capture · Esc to cancel`;
+      title.textContent = s.fontFamily.split(',')[0].replace(/[\"']/g,'');
+      detail.textContent = `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight} · Click to select`;
     };
     const click = async event => {
       event.preventDefault(); event.stopImmediatePropagation();
@@ -52,13 +53,14 @@
     cleanup = () => {clearTimeout(timeout);host.remove();document.removeEventListener('pointermove',move,true);document.removeEventListener('click',click,true);document.removeEventListener('pointerdown',block,true);document.removeEventListener('keydown',key,true);};
   }
   function scan() {
-    cleanup();
     const styles = new Map();
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
     let el, visited=0;
     while ((el=walker.nextNode()) && visited++<10000) {
-      if (el.matches('script,style,noscript,input,textarea,select') || el.closest('[hidden],[aria-hidden="true"]')) continue;
+      if (el.matches('script,style,noscript,input,textarea,select') || el.closest('[hidden],[aria-hidden="true"],[data-type-pilot]')) continue;
       if (![...el.childNodes].some(n=>n.nodeType===Node.TEXT_NODE && n.textContent.trim())) continue;
+      const closedDetails = el.closest('details:not([open])');
+      if (closedDetails && !closedDetails.querySelector(':scope > summary')?.contains(el)) continue;
       const rect=el.getBoundingClientRect();
       if (!rect.width || !rect.height) continue;
       const computed=getComputedStyle(el);
