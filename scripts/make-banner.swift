@@ -8,7 +8,7 @@ func rect(_ x:CGFloat,_ y:CGFloat,_ w:CGFloat,_ h:CGFloat,_ radius:CGFloat,_ c:N
 func text(_ value:String,_ x:CGFloat,_ y:CGFloat,_ size:CGFloat,_ c:NSColor,_ font:String="Helvetica"){(value as NSString).draw(at:NSPoint(x:x,y:y),withAttributes:[.font:NSFont(name:font,size:size) ?? NSFont.systemFont(ofSize:size),.foregroundColor:c])}
 let ink=color(43,36,52),muted=color(121,113,126),purple=color(121,84,167)
 rect(0,0,1500,844,0,color(246,243,237));rect(0,0,1500,12,0,purple)
-text("TYPE PILOT",88,727,20,purple,"Helvetica-Bold");text("A BROWSER TYPOGRAPHY WORKSPACE",88,678,12,muted)
+text("FONT PIRATE",88,727,20,purple,"Helvetica-Bold");text("A BROWSER TYPOGRAPHY WORKSPACE",88,678,12,muted)
 text("Good type.",80,471,98,ink,"Georgia");text("Great company.",80,353,88,purple,"Georgia-Italic")
 text("Inspect. Pair. Make it yours.",88,264,24,muted)
 rect(88,147,240,62,12,purple);text("Find your type  ↗",116,165,21,.white,"Helvetica-Bold")

@@ -3,6 +3,7 @@
   <h1>Font Pirate</h1>
   <p>Good type is out there.</p>
   <p>Google Fonts, page inspection and saved pairings for Chrome and Edge.</p>
+  <p><a href="https://stefanmihajlovic.com/font-pirate/">Website</a> · <a href="https://github.com/Stefan-Mihajlovic/Font-Pirate">GitHub</a></p>
 </div>
 
 <p align="center"><img src="assets/screenshots/catalog.png" width="340" alt="Google Fonts catalog"><img src="assets/screenshots/pairing.png" width="340" alt="A saved font pairing"></p>
@@ -19,14 +20,14 @@ Select text and choose **Identify font** from the right-click menu. Or choose **
 
 Add fonts to a heading, body, subheading or caption. Preview the combination, save it, copy CSS, or export CSS/JSON. Existing Type Pilot libraries and JSON backups remain compatible.
 
-## Try the local preview
+## Install for development
 
-1. Download the ZIP and unzip it.
+1. Clone this repository or download its source ZIP and unzip it.
 2. Open `edge://extensions` or `chrome://extensions` and enable **Developer mode**.
 3. Choose **Load unpacked** and select the folder containing `manifest.json`.
 4. Pin **Font Pirate**. Reload the extension after local changes.
 
-The current redesign is a local preview. The public portfolio page stays removed until approved. The repository folder and GitHub URL retain the earlier TypePilot name to preserve the installed development extension and history.
+The extension is named **Font Pirate** (version 2.0.0). See the [website](https://stefanmihajlovic.com/font-pirate/) for downloads and product details. The GitHub repository is `Stefan-Mihajlovic/Font-Pirate`. Existing development checkouts can keep their original folder path so their unpacked extension ID and saved data remain unchanged.
 
 ## Privacy and previews
 
