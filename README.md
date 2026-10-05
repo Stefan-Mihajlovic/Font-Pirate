@@ -59,7 +59,7 @@ npm test
 npm run package
 ```
 
-The package is `dist/font-pirate-2.1.0.zip`. It includes the complete catalog and all runtime files. The generated ZIP is ignored by Git.
+The package is `dist/font-pirate-2.1.0.zip`. It includes the complete catalog and all runtime files. The generated ZIP is ignored by Git. Packaged previews include the Chrome store public key for a stable extension ID; the source manifest omits it to preserve existing local development installations.
 
 ### Refresh the catalog
 
