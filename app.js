@@ -1,3 +1,4 @@
+import {setupPlus} from './plus-ui.js';
 import {ROLES, LABELS, newSet, normalizeStyle, exportCSS as baseExportCSS, exportJSON, fileName} from './core.js';
 import {fonts, filterFonts, familyOf, loadFont, fontCSSURL} from './catalog.js';
 
@@ -40,8 +41,8 @@ function toast(text) {
 function view(name) {
   document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== name);
   document.querySelectorAll('[data-view]').forEach(el => {
-    el.classList.toggle('active', el.dataset.view === (name === 'pairing' ? 'library' : name));
-    if (el.dataset.view === (name === 'pairing' ? 'library' : name)) el.setAttribute('aria-current', 'page');
+    el.classList.toggle('active', el.dataset.view === (name === 'pairing' ? 'library' : name === 'plus-tools' ? 'catalog' : name));
+    if (el.dataset.view === (name === 'pairing' ? 'library' : name === 'plus-tools' ? 'catalog' : name)) el.setAttribute('aria-current', 'page');
     else el.removeAttribute('aria-current');
   });
   if (name === 'pairing') renderEditor();
@@ -416,3 +417,5 @@ $('use-font').onclick=()=>{role=$('detail-role').value;const chosen=detailStyle(
 $('copy-font').onclick=()=>action(async()=>{const s=detailStyle();await navigator.clipboard.writeText(`@import url('${fontCSSURLForSelected()}');\n\nfont-family: ${s.fontFamily};\nfont-weight: ${s.fontWeight};\nfont-style: ${s.fontStyle};`);toast('CSS copied.');});
 function fontCSSURLForSelected(){const w=$('detail-weight').value;return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(selectedFont.family)}:${w.endsWith('i')?'ital,wght@1,':'wght@'}${parseInt(w)}&display=swap`;}
 chrome.storage.local.get('fontFavorites').then(data=>{favorites=new Set((data.fontFavorites||[]).filter(name=>fonts.some(f=>f.family===name)));renderFonts();});
+
+setupPlus({$,fonts,loadFont,view,openFont,request,toast,getSelectedFont:()=>selectedFont});

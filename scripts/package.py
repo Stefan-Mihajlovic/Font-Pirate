@@ -1,9 +1,9 @@
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 root = Path(__file__).resolve().parents[1]
-output = root / 'dist' / 'font-pirate-2.0.0.zip'
+output = root / 'dist' / 'font-pirate-2.1.0.zip'
 output.parent.mkdir(exist_ok=True)
-files = ['manifest.json', 'background.js', 'core.js', 'catalog.js', 'fonts.json', 'content.js', 'index.html', 'app.js', 'style.css', 'LICENSE']
+files = ['manifest.json', 'background.js', 'core.js', 'catalog.js', 'fonts.json', 'content.js', 'index.html', 'app.js', 'style.css', 'LICENSE', 'plus-ui.js', 'plus-license.js', 'page-preview.js', 'font-matching.js', 'font-signatures.json']
 with ZipFile(output, 'w', ZIP_DEFLATED) as z:
     for name in files:
         z.write(root / name, name)

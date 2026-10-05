@@ -1,6 +1,38 @@
+import {licenseAction, requirePlus} from './plus-license.js';
+import {previewPageFont} from './page-preview.js';
 import {normalizeStyle, normalizeSet, importSets} from './core.js';
 // Library writes go through one queue so popup and side panel cannot race.
 let queue = Promise.resolve();
+chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+  if(sender.id!==chrome.runtime.id||sender.tab||!['PLUS_LICENSE','PLUS_ACCESS','PLUS_PREVIEW'].includes(message?.type))return;
+  (async()=>{
+    if(message.type==='PLUS_LICENSE'){
+      if(!['status','activate','deactivate'].includes(message.action))throw new Error('Invalid license action.');
+      return licenseAction(message.action,message.key);
+    }
+    if(message.type==='PLUS_ACCESS'){await requirePlus();return {};}
+    const scope=message.scope;
+    if(!['all','headings','body','restore'].includes(scope))throw new Error('Choose a preview scope.');
+    if(scope!=='restore')await requirePlus();
+    const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
+    if(!tab?.id||(tab.url&&!/^https?:/.test(tab.url)))throw new Error('Open a website, then click the Font Pirate toolbar icon.');
+    let bytes=[];
+    if(scope!=='restore'){
+      const catalog=await fetch(chrome.runtime.getURL('fonts.json')).then(r=>r.json());
+      const font=catalog.fonts.find(f=>f.family===message.family);if(!font)throw new Error('Choose a Google Font.');
+      const weight=font.weights.filter(w=>!w.endsWith('i')).sort((a,b)=>Math.abs(a-400)-Math.abs(b-400))[0];
+      const css=await fetch('https://fonts.googleapis.com/css2?family='+encodeURIComponent(font.family)+':wght@'+weight,{signal:AbortSignal.timeout(12000)}).then(r=>r.text());
+      // A single complete face from the API's non-browser response, or its Latin subset.
+      const urls=[...css.matchAll(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/g)];
+      const url=urls.at(-1)?.[1];if(!url)throw new Error('Font could not load. Try again.');
+      const response=await fetch(url,{signal:AbortSignal.timeout(12000)});if(!response.ok)throw new Error('Font download failed.');
+      const buffer=await response.arrayBuffer();if(buffer.byteLength>3000000)throw new Error('Font file is too large.');bytes=Array.from(new Uint8Array(buffer));
+    }
+    const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:previewPageFont,args:[message.family||'',bytes,scope]});
+    return {changed:result[0]?.result||0};
+  })().then(result=>reply({ok:true,...result}),error=>reply({ok:false,error:error.message}));return true;
+});
+
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (sender.id !== chrome.runtime.id) return;
   if (message.type === 'CAPTURE' && sender.tab) {
