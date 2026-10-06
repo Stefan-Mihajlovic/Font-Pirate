@@ -82,7 +82,7 @@ The custom letter and eyepatch live in `assets/font-pirate/FontPirate.icon`. The
 python3 scripts/resize-icons.py
 ```
 
-Design rationale and sources: [DESIGN.md](DESIGN.md).
+Final store screenshots are in `assets/store/screenshots/`; small and marquee promo tiles are in `assets/store/promo/`. Build outputs and local test files are excluded from Git.
 
 ## License
 
