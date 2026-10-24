@@ -1,17 +1,44 @@
 import {rankShapes,imageGlyphs} from './font-matching.js';
 export function setupPlus({$,fonts,loadFont,view,openFont,request,toast,getSelectedFont}){
- let active=false,licenseKey='',indexPromise,imageCanvas,crop,drag;
+ let active=false,licenseKey='',indexPromise,imageCanvas,crop,drag,access={},busy=false,revision=0;
  const index=()=>indexPromise||(indexPromise=fetch(chrome.runtime.getURL('font-signatures.json')).then(r=>{if(!r.ok)throw new Error('Font matching data unavailable. Reinstall Font Pirate.');return r.json();}));
- const showPlus=()=>{$('plus-dialog').showModal();};
- const state=result=>{active=!!result.active;licenseKey=result.key||'';$('plus-offer').hidden=active;$('plus-active').hidden=!active;$('license-form').hidden=active;$('plus-home').textContent=active?'Plus ✓':'Plus';};
+ const showPlus=()=>{if(!$('plus-dialog').open)$('plus-dialog').showModal();};
+ const render=()=>{
+  const paid=access.plan==='lifetime'&&active,trial=access.trial,trialActive=access.plan==='trial'&&active;
+  const ended=trial?.status==='expired'||trial?.status==='cancelled';
+  $('plus-offer').hidden=paid;$('plus-active').hidden=!paid;$('license-entry').hidden=paid;$('plus-trial').hidden=paid;
+  $('plus-home').textContent=paid?'Plus ✓':trialActive?'Trial':'Plus';
+  $('trial-title').textContent=trialActive?'Every Plus tool is yours.':trial?.status==='cancelled'?'Your trial is cancelled.':ended?'Your trial has ended.':'Try every Plus tool.';
+  const remaining=Math.max(0,(trial?.expiresAt||0)*1000-Date.now()),days=Math.ceil(remaining/86400000);
+  $('trial-badge').textContent=trialActive?(days>1?`${days} days left`:'Less than a day left'):ended?'Free plan':'7 days free';
+  $('trial-description').textContent=trialActive?`Explore Plus until ${new Date(trial.expiresAt*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}.`:ended?'Your pairings and favorites are still here. Get lifetime Plus to keep using every tool.':'Find similar fonts, try them on a website, and match type from images.';
+  $('start-trial').hidden=trialActive||ended;$('start-trial').disabled=busy||trial?.status!=='eligible';
+  $('cancel-trial').hidden=!trialActive;$('cancel-trial').disabled=busy;
+  $('trial-note').hidden=ended;$('trial-progress').hidden=!trialActive;
+  $('trial-progress').value=trialActive?Math.max(0,Math.min(100,remaining/((trial.expiresAt-trial.startedAt)*1000)*100)):0;
+  $('activate-plus').disabled=busy;$('deactivate-plus').disabled=busy;
+ };
+ const state=result=>{access=result;active=!!result.active;licenseKey=result.key||'';render();};
+ const refresh=async()=>{const current=++revision;try{const result=await request({type:'PLUS_STATE'});if(current===revision)state(result);}catch{}};
+ const run=async(message,statusId,success)=>{
+  if(busy)return;busy=true;render();$(statusId).textContent='Please wait…';
+  try{const result=await request(message);++revision;state(result);$(statusId).textContent=result.error||(message.type==='PLUS_TRIAL'&&message.action==='start'&&result.plan!=='trial'?'This installation has already used its trial.':success);}
+  catch(e){$(statusId).textContent=e.message;}
+  finally{busy=false;render();}
+ };
+ $('start-trial').onclick=()=>run({type:'PLUS_TRIAL',action:'start'},'trial-status','Your Plus trial is ready.');
+ $('cancel-trial').onclick=()=>{if(confirm('End your trial now? It cannot be restarted on this installation. Your pairings and favorites will stay saved.'))void run({type:'PLUS_TRIAL',action:'cancel'},'trial-status','Trial ended. Your saved work is unchanged.');};
+ chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&['fpPlusInstallation','fpPlusEntitlement','fpPlusTrial'].some(key=>changes[key])){if(changes.fpPlusTrial)$('trial-status').textContent='';void refresh();}});
+ setInterval(()=>{if(active&&access.expiresAt*1000<=Date.now()){active=false;access.plan='free';if(access.trial?.status==='active'&&access.trial.expiresAt*1000<=Date.now())access.trial.status='expired';render();void refresh();}else if(access.plan==='trial')render();},1000);
  const allowed=async()=>{try{await request({type:'PLUS_ACCESS'});return true;}catch{showPlus();return false;}};
  const tool=(title,image=false)=>{view('plus-tools');$('plus-tool-title').textContent=title;$('image-controls').hidden=!image;$('plus-results').replaceChildren();$('matching-status').textContent='';};
  const results=(ranked,sample)=>{for(const result of ranked.slice(0,8)){const font=fonts.find(f=>f.family===result.family);if(!font)continue;const row=document.createElement('div');row.className='catalog-row';const button=document.createElement('button');button.className='catalog-font';const preview=document.createElement('span');preview.className='catalog-font-sample';preview.textContent=sample||font.family;preview.style.fontFamily=`"${font.family}"`;const label=document.createElement('span');label.className='catalog-family-name';label.textContent=font.family;button.append(preview,label);button.onclick=()=>{view('catalog');openFont(font);};row.append(button);$('plus-results').append(row);loadFont(font.family).catch(()=>{});}};
  $('plus-home').onclick=showPlus;$('close-plus').onclick=()=>$('plus-dialog').close();$('back-plus').onclick=()=>view('catalog');
- $('license-form').onsubmit=async e=>{e.preventDefault();$('activate-plus').disabled=true;$('license-status').textContent='Activating…';try{state(await request({type:'PLUS_LICENSE',action:'activate',key:$('plus-key').value}));$('license-status').textContent='Plus is ready.';}catch(e){$('license-status').textContent=e.message;}finally{$('activate-plus').disabled=false;}};
+ $('license-form').onsubmit=e=>{e.preventDefault();void run({type:'PLUS_LICENSE',action:'activate',key:$('plus-key').value},'license-status','Plus is ready.');};
  $('copy-license').onclick=()=>navigator.clipboard.writeText(licenseKey).then(()=>toast('License key copied.')).catch(()=>{$('license-status').textContent=licenseKey;});
- $('deactivate-plus').onclick=async()=>{if(!confirm('Deactivate Plus on this installation? Your license key can be used again.'))return;try{state(await request({type:'PLUS_LICENSE',action:'deactivate'}));$('license-status').textContent='Deactivated. Your pairings are unchanged.';}catch(e){$('license-status').textContent=e.message;}};
- request({type:'PLUS_LICENSE',action:'status'}).then(state).catch(e=>{$('license-status').textContent=e.message;});
+ $('deactivate-plus').onclick=()=>{if(confirm('Deactivate Plus on this installation? Your license key can be used again.'))void run({type:'PLUS_LICENSE',action:'deactivate'},'license-status','Deactivated. Your pairings are unchanged.');};
+ void refresh();
+ request({type:'PLUS_LICENSE',action:'status'}).then(result=>{++revision;state(result);$('trial-status').textContent=result.error?(result.active?'Offline access is available until the verified expiry.':'Connect to the internet to check your trial.'):'';}).catch(e=>{$('trial-status').textContent=e.message;});
  $('similar-fonts').onclick=async()=>{if(!await allowed())return;const font=getSelectedFont();tool('Similar to '+font.family);$('matching-status').textContent='Comparing letter shapes…';try{const data=await index(),reference=data.fonts[font.family],chars='agpenRMW012';if(!reference)throw new Error('This family is not in the matching index yet.');const samples=[...chars].map(c=>reference.glyphs[data.chars.indexOf(c)]);results(rankShapes(samples,chars,data,font.family),$('detail-sample').value);$('matching-status').textContent='Closest Google Fonts by letter shape.';}catch(e){$('matching-status').textContent=e.message;}};
  $('try-page').onclick=async()=>{if(!await allowed())return;$('page-preview-family').textContent=getSelectedFont().family;$('page-preview-status').textContent='';$('page-preview-dialog').showModal();};
  $('close-page-preview').onclick=()=>$('page-preview-dialog').close();

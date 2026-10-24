@@ -1,15 +1,17 @@
-import {licenseAction, requirePlus} from './plus-license.js';
+import {licenseAction, trialAction, accessState, requirePlus} from './plus-license.js';
 import {previewPageFont} from './page-preview.js';
 import {normalizeStyle, normalizeSet, importSets} from './core.js';
 // Library writes go through one queue so popup and side panel cannot race.
 let queue = Promise.resolve();
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
-  if(sender.id!==chrome.runtime.id||sender.url?.split(/[?#]/)[0]!==chrome.runtime.getURL('index.html')||!['PLUS_LICENSE','PLUS_ACCESS','PLUS_PREVIEW'].includes(message?.type))return;
+  if(sender.id!==chrome.runtime.id||sender.url?.split(/[?#]/)[0]!==chrome.runtime.getURL('index.html')||!['PLUS_LICENSE','PLUS_TRIAL','PLUS_STATE','PLUS_ACCESS','PLUS_PREVIEW'].includes(message?.type))return;
   (async()=>{
     if(message.type==='PLUS_LICENSE'){
       if(!['status','activate','deactivate'].includes(message.action))throw new Error('Invalid license action.');
       return licenseAction(message.action,message.key);
     }
+    if(message.type==='PLUS_TRIAL')return trialAction(message.action);
+    if(message.type==='PLUS_STATE')return accessState();
     if(message.type==='PLUS_ACCESS'){await requirePlus();return {};}
     const scope=message.scope;
     if(!['all','headings','body','restore'].includes(scope))throw new Error('Choose a preview scope.');

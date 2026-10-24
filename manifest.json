@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Font Pirate",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "minimum_chrome_version": "116",
   "description": "Explore Google Fonts, identify type on websites, and save your font pairings.",
   "permissions": [

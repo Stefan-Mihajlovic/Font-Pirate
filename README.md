@@ -28,7 +28,9 @@ Add fonts to a heading, body, subheading or caption. Preview the combination, sa
 - **Try on this page:** temporarily replace all text, headings or body text with a Google Font. Press Escape on the page or choose Restore page fonts to undo.
 - **Match an image:** crop one line and transcribe 3–32 Latin letters or digits. Matching runs locally against 1,945 Google Fonts; images never leave your device. Results are approximate suggestions, not guaranteed identification. Connected handwriting, complex backgrounds and commercial fonts outside Google Fonts are not supported.
 
-Buy from the [website](https://stefanmihajlovic.com/font-pirate/#plus), save the key shown after checkout, and enter it under **Plus → Activate**. An installation can be deactivated to free a slot. Signed entitlements allow up to seven days between online checks. See the [Plus terms](https://stefanmihajlovic.com/font-pirate/terms.html).
+Start an optional **7-day free trial** from the Plus dialog. No account, card or automatic charge. The dialog shows remaining time and lets you end the trial permanently. One trial per installation; expiry restores Free access without deleting pairings or favorites. A signed trial works offline until its verified deadline. Paid licenses always take precedence.
+
+Buy from the [website](https://stefanmihajlovic.com/font-pirate/#plus), save the key shown after checkout, and enter it under **Plus → Already have a license?**. An installation can be deactivated to free a slot. Signed entitlements allow up to seven days between online checks. See the [Plus terms](https://stefanmihajlovic.com/font-pirate/terms.html).
 
 ## Install for development
 
@@ -37,11 +39,12 @@ Buy from the [website](https://stefanmihajlovic.com/font-pirate/#plus), save the
 3. Choose **Load unpacked** and select the folder containing `manifest.json`.
 4. Pin **Font Pirate**. Reload the extension after local changes.
 
-The extension is named **Font Pirate** (version 2.1.0). See the [website](https://stefanmihajlovic.com/font-pirate/) for downloads and product details. The GitHub repository is `Stefan-Mihajlovic/Font-Pirate`. Existing development checkouts can keep their original folder path so their unpacked extension ID and saved data remain unchanged.
+The extension is named **Font Pirate** (version 2.2.0). See the [website](https://stefanmihajlovic.com/font-pirate/) for downloads and product details. The GitHub repository is `Stefan-Mihajlovic/Font-Pirate`. Existing development checkouts can keep their original folder path so their unpacked extension ID and saved data remain unchanged.
 
 ## Privacy and previews
 
 - Pairings, favorites and image matching stay on your device. No account, analytics or telemetry.
+- Trial status, start and cancellation send the product ID and a random installation ID to the licensing service. Opening the extension checks availability but never starts a trial.
 - Plus activation sends a license key, random installation ID and extension version to the licensing service. Stripe handles payment; the extension never receives card details. See the [privacy policy](https://stefanmihajlovic.com/font-pirate/privacy/).
 - Google font stylesheets and font files are loaded from `fonts.googleapis.com` and `fonts.gstatic.com`. These requests include the font family and style, never your preview text or captured text.
 - The bundled catalog works offline; remote font previews need a connection or browser cache. An unavailable preview is reported rather than presented as an exact font.
@@ -57,9 +60,11 @@ Vanilla HTML, CSS and JavaScript. Manifest V3, Chrome/Edge 116+.
 ```sh
 npm test
 npm run package
+# Optional: with Playwright installed, run the isolated extension browser checks
+node tests/trial-browser.cjs
 ```
 
-The package is `dist/font-pirate-2.1.0.zip`. It includes the complete catalog and all runtime files. The generated ZIP is ignored by Git. Packaged previews include the Chrome store public key for a stable extension ID; the source manifest omits it to preserve existing local development installations.
+The package is `dist/font-pirate-2.2.0.zip`. It includes the complete catalog and all runtime files. The generated ZIP is ignored by Git. Packaged previews include the Chrome store public key for a stable extension ID; the source manifest omits it to preserve existing local development installations.
 
 ### Refresh the catalog
 
